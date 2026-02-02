@@ -17,8 +17,11 @@ def get_cache_dir():
 
 def get_cache_path(text, engine, lang, rate=175, pitch=50):
     """Generates a unique cache path for the given parameters."""
+    # Normalize text to lowercase to ensure case-insensitive caching
+    normalized_text = text.lower().strip()
+    
     # Create a unique key based on inputs
-    key_str = f"{text}|{engine}|{lang}|{rate}|{pitch}"
+    key_str = f"{normalized_text}|{engine}|{lang}|{rate}|{pitch}"
     key_hash = hashlib.sha256(key_str.encode()).hexdigest()
     
     extension = ".mp3" if engine == "google" else ".wav"
