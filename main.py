@@ -7,13 +7,41 @@ import os
 import tempfile
 import requests
 
+def detect_language(text):
+    """Detects the language of the text using a lightweight Google API."""
+    if not text or len(text.strip()) < 3:
+        return "ca" # Default to Catalan for very short text
+    
+    url = "https://translate.googleapis.com/translate_a/single"
+    params = {
+        "client": "gtx",
+        "sl": "auto",
+        "tl": "en", # Target language doesn't matter for detection
+        "dt": "t",
+        "q": text
+    }
+    
+    try:
+        response = requests.get(url, params=params, timeout=5)
+        response.raise_for_status()
+        # The response is a nested list, the detected language is at index 2
+        data = response.json()
+        if len(data) > 2 and isinstance(data[2], str):
+            detected = data[2]
+            print(f"Detected language: {detected}")
+            return detected
+    except Exception as e:
+        print(f"Warning: Language detection failed ({e}). Defaulting to 'ca'.", file=sys.stderr)
+    
+    return "ca"
+
 def run_tts(text, engine="google", voice=None, output_file=None, rate=175, pitch=50):
     """Runs the selected TTS engine."""
+    # Detect language if not specified
+    lang = voice if voice else detect_language(text)
+    
     if engine == "google":
         # Google Translate TTS (online)
-        # Default voice to 'ca' (Catalan) if not specified, 
-        # or try to guess/default to something sensible.
-        lang = voice if voice else "ca"
         url = "https://translate.google.com/translate_tts"
         params = {
             "ie": "UTF-8",
@@ -62,7 +90,7 @@ def run_tts(text, engine="google", voice=None, output_file=None, rate=175, pitch
         except Exception as e:
             print(f"Error using Google TTS: {e}", file=sys.stderr)
             print("Falling back to espeak-ng...", file=sys.stderr)
-            run_tts(text, engine="espeak-ng", voice=voice, output_file=output_file, rate=rate, pitch=pitch)
+            run_tts(text, engine="espeak-ng", voice=lang, output_file=output_file, rate=rate, pitch=pitch)
 
     elif engine == "espeak-ng":
         if not shutil.which("espeak-ng"):
@@ -75,11 +103,8 @@ def run_tts(text, engine="google", voice=None, output_file=None, rate=175, pitch
         # -p: pitch (0-99)
         cmd = ["espeak-ng", "-s", str(rate), "-p", str(pitch)]
         
-        if voice:
-            cmd += ["-v", voice]
-        elif not voice:
-            # Default to Catalan if not specified, as requested by the user's context
-            cmd += ["-v", "ca"]
+        # Use detected or specified lang
+        cmd += ["-v", lang]
             
         if output_file:
             cmd += ["-w", output_file]
