@@ -39,7 +39,7 @@ echo "Process finished successfully" | python3 main.py
 
 ## Options
 
-- `-e, --engine`: Choose between `espeak-ng` (robotic, offline) or `google` (natural, online). Default is `espeak-ng`.
+- `-e, --engine`: Choose between `google` (natural, online) or `espeak-ng` (robotic, offline). Default is `google`.
 - `-v, --voice`: Language/voice code (e.g., `ca`, `en`, `es`, `fr`). Default is `ca`.
 - `-o, --output`: Save speech to an audio file (wav for espeak, mp3 for google).
 - `-r, --rate`: Speech rate (words per minute, for `espeak-ng`).

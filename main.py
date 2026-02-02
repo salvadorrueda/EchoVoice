@@ -7,7 +7,7 @@ import os
 import tempfile
 import requests
 
-def run_tts(text, engine="espeak-ng", voice=None, output_file=None, rate=175, pitch=50):
+def run_tts(text, engine="google", voice=None, output_file=None, rate=175, pitch=50):
     """Runs the selected TTS engine."""
     if engine == "google":
         # Google Translate TTS (online)
@@ -106,9 +106,9 @@ def main():
     )
     parser.add_argument(
         "-e", "--engine", 
-        default="espeak-ng", 
+        default="google", 
         choices=["espeak-ng", "google"],
-        help="TTS engine (default: espeak-ng)"
+        help="TTS engine (default: google)"
     )
     parser.add_argument(
         "-v", "--voice",
