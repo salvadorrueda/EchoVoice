@@ -6,6 +6,23 @@ import shutil
 import os
 import tempfile
 import requests
+import hashlib
+
+def get_cache_dir():
+    """Returns the cache directory path."""
+    cache_dir = os.path.expanduser("~/.cache/echovoice")
+    if not os.path.exists(cache_dir):
+        os.makedirs(cache_dir, exist_ok=True)
+    return cache_dir
+
+def get_cache_path(text, engine, lang, rate=175, pitch=50):
+    """Generates a unique cache path for the given parameters."""
+    # Create a unique key based on inputs
+    key_str = f"{text}|{engine}|{lang}|{rate}|{pitch}"
+    key_hash = hashlib.sha256(key_str.encode()).hexdigest()
+    
+    extension = ".mp3" if engine == "google" else ".wav"
+    return os.path.join(get_cache_dir(), f"{key_hash}{extension}")
 
 def detect_language(text):
     """Detects the language of the text using a lightweight Google API."""
@@ -35,11 +52,44 @@ def detect_language(text):
     
     return "ca"
 
-def run_tts(text, engine="google", voice=None, output_file=None, rate=175, pitch=50):
+def play_audio(file_path):
+    """Helper to play audio using available system tools."""
+    if shutil.which("gst-launch-1.0"):
+        cmd = [
+            "gst-launch-1.0", "-q", 
+            "filesrc", f"location={file_path}", "!", 
+            "decodebin", "!", "audioconvert", "!", 
+            "audioresample", "!", "autoaudiosink"
+        ]
+    elif shutil.which("mpv"):
+        cmd = ["mpv", "--no-terminal", file_path]
+    elif shutil.which("ffplay"):
+        cmd = ["ffplay", "-nodisp", "-autoexit", file_path]
+    else:
+        print("Error: No audio player found (gst-launch-1.0, mpv, or ffplay).", file=sys.stderr)
+        print(f"Audio saved to: {file_path}", file=sys.stderr)
+        return False
+    
+    try:
+        subprocess.run(cmd, check=True, stdout=subprocess.DEVNULL, stderr=subprocess.DEVNULL)
+        return True
+    except subprocess.CalledProcessError:
+        return False
+
+def run_tts(text, engine="google", voice=None, output_file=None, rate=175, pitch=50, use_cache=True):
     """Runs the selected TTS engine."""
     # Detect language if not specified
     lang = voice if voice else detect_language(text)
     
+    # Cache management
+    cache_path = None
+    if use_cache and not output_file:
+        cache_path = get_cache_path(text, engine, lang, rate, pitch)
+        if os.path.exists(cache_path):
+            print(f"Using cached audio: {cache_path}")
+            play_audio(cache_path)
+            return
+
     if engine == "google":
         # Google Translate TTS (online)
         url = "https://translate.google.com/translate_tts"
@@ -60,58 +110,59 @@ def run_tts(text, engine="google", voice=None, output_file=None, rate=175, pitch
                     f.write(response.content)
                 print(f"Generated audio file: {output_file}")
             else:
-                with tempfile.NamedTemporaryFile(suffix=".mp3", delete=False) as tf:
-                    tf.write(response.content)
-                    temp_path = tf.name
+                # Save to cache if enabled
+                save_path = cache_path if use_cache else None
+                if not save_path:
+                    # If cache disabled or failed, use a temp file
+                    with tempfile.NamedTemporaryFile(suffix=".mp3", delete=False) as tf:
+                        tf.write(response.content)
+                        save_path = tf.name
+                else:
+                    with open(save_path, 'wb') as f:
+                        f.write(response.content)
                 
                 try:
-                    # Try to play using common Linux tools
-                    if shutil.which("gst-launch-1.0"):
-                        cmd = [
-                            "gst-launch-1.0", "-q", 
-                            "filesrc", f"location={temp_path}", "!", 
-                            "decodebin", "!", "audioconvert", "!", 
-                            "audioresample", "!", "autoaudiosink"
-                        ]
-                    elif shutil.which("mpv"):
-                        cmd = ["mpv", "--no-terminal", temp_path]
-                    elif shutil.which("ffplay"):
-                        cmd = ["ffplay", "-nodisp", "-autoexit", temp_path]
-                    else:
-                        print("Error: No audio player found (gst-launch-1.0, mpv, or ffplay).", file=sys.stderr)
-                        print(f"Audio saved to: {temp_path}", file=sys.stderr)
-                        return
-
-                    subprocess.run(cmd, check=True, stdout=subprocess.DEVNULL, stderr=subprocess.DEVNULL)
+                    play_audio(save_path)
                 finally:
-                    if os.path.exists(temp_path):
-                        os.remove(temp_path)
+                    # Only delete if it's NOT a cache file
+                    if not use_cache and os.path.exists(save_path):
+                        os.remove(save_path)
                         
         except Exception as e:
             print(f"Error using Google TTS: {e}", file=sys.stderr)
             print("Falling back to espeak-ng...", file=sys.stderr)
-            run_tts(text, engine="espeak-ng", voice=lang, output_file=output_file, rate=rate, pitch=pitch)
+            run_tts(text, engine="espeak-ng", voice=lang, output_file=output_file, rate=rate, pitch=pitch, use_cache=use_cache)
 
     elif engine == "espeak-ng":
         if not shutil.which("espeak-ng"):
             print("Error: espeak-ng is not installed. Please install it using: sudo apt install espeak-ng", file=sys.stderr)
             sys.exit(1)
         
+        # Determine actual file to write to
+        internal_output = output_file
+        if not internal_output and use_cache:
+            internal_output = cache_path
+
         # Build command
         # -v: voice/language
         # -s: speed (words per minute)
         # -p: pitch (0-99)
         cmd = ["espeak-ng", "-s", str(rate), "-p", str(pitch)]
-        
-        # Use detected or specified lang
         cmd += ["-v", lang]
             
-        if output_file:
-            cmd += ["-w", output_file]
-            print(f"Generating audio file: {output_file}...")
+        if internal_output:
+            cmd += ["-w", internal_output]
+            if output_file:
+                print(f"Generating audio file: {output_file}...")
         
         try:
+            # If no output file and no cache, espeak plays directly.
+            # Otherwise, we write to file and then play.
             subprocess.run(cmd, input=text, text=True, check=True)
+            
+            if internal_output and not output_file:
+                play_audio(internal_output)
+                
         except subprocess.CalledProcessError as e:
             print(f"Error running espeak-ng: {e}", file=sys.stderr)
             sys.exit(1)
@@ -153,7 +204,13 @@ def main():
         "-p", "--pitch", 
         type=int, 
         default=50, 
-        help="Pitch (0-99, default: 50)"
+        help="Pitch (0-99, for espeak-ng, default: 50)"
+    )
+    parser.add_argument(
+        "--no-cache",
+        action="store_false",
+        dest="use_cache",
+        help="Disable audio caching."
     )
 
     args = parser.parse_args()
@@ -177,7 +234,8 @@ def main():
         voice=args.voice,
         output_file=args.output, 
         rate=args.rate, 
-        pitch=args.pitch
+        pitch=args.pitch,
+        use_cache=args.use_cache
     )
 
 if __name__ == "__main__":

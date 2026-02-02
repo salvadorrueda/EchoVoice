@@ -44,9 +44,19 @@ echo "Process finished successfully" | python3 main.py
 - `-o, --output`: Save speech to an audio file (wav for espeak, mp3 for google).
 - `-r, --rate`: Speech rate (words per minute, for `espeak-ng`).
 - `-p, --pitch`: Pitch (0-99, for `espeak-ng`).
+- `--no-cache`: Disable audio caching.
+
+## Features
+
+- **Natural Speech**: Uses Google Translate TTS by default for high-quality audio.
+- **Offline Fallback**: Automatically switches to `espeak-ng` if internet is unavailable.
+- **Language Detection**: Automatically identifies the language of the input text.
+- **Audio Caching**: Stores generated audio files in `~/.cache/echovoice/` to avoid repeated API calls and improve performance.
 
 ### Example
 ```bash
-python3 main.py "System alert" -e google -v ca -o alert.mp3
+python3 main.py "Hola, aquesta frase es quedarà a la caché."
+# Second time will be instant:
+python3 main.py "Hola, aquesta frase es quedarà a la caché."
 ```
 
