@@ -4,8 +4,19 @@ EchoVoice is a lightweight command-line tool that converts text into speech. It 
 
 ## Installation
 
-Ensure you have Python 3 installed. You also need to install `espeak-ng`:
+Ensure you have Python 3 installed.
 
+### Quick Install (GNU/Linux)
+Run the following command to install EchoVoice and all dependencies automatically:
+
+```bash
+curl -sSL https://raw.githubusercontent.com/salvadorrueda/EchoVoice/main/install.sh | bash
+```
+
+### Manual Installation
+If you prefer to install it manually:
+
+1. Install `espeak-ng`:
 ```bash
 sudo apt update
 sudo apt install espeak-ng
