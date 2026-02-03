@@ -94,3 +94,12 @@ echovoice "Hola, aquesta frase es quedarà a la caché."
 echovoice "Hola, aquesta frase es quedarà a la caché."
 ```
 
+## Examples
+
+For more practical examples of how to use EchoVoice in your daily workflow (including aliases, greetings, and notifications), check out the [examples.sh](file:///home/salvadorrueda/Developer/Antigravity/EchoVoice/EchoVoice/examples.sh) script.
+
+You can run it to see the commands in the terminal:
+```bash
+./examples.sh
+```
+
