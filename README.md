@@ -11,30 +11,44 @@ sudo apt update
 sudo apt install espeak-ng
 ```
 
+### Global Command (Optional)
+To run EchoVoice simply by typing `echovoice` instead of `python3 main.py`, you can create a symbolic link in your local bin directory:
+
+```bash
+# Ensure ~/.local/bin exists and is in your PATH
+mkdir -p ~/.local/bin
+echo 'export PATH="$HOME/.local/bin:$PATH"' >> ~/.bashrc
+source ~/.bashrc
+
+# Create the symbolic link
+ln -sf "$(pwd)/main.py" ~/.local/bin/echovoice
+chmod +x main.py
+```
+
 ## Usage
 
 ### Basic Usage
 Convert a string to speech:
 ```bash
-python3 main.py "Hola, com estàs?"
+echovoice "Hola, com estàs?"
 ```
 
 ### Natural Speech (Online)
 Use the more natural Google engine (requires internet):
 ```bash
-python3 main.py "Bon dia a tothom" -e google
+echovoice "Bon dia a tothom" -e google
 ```
 
 ### Voice/Language Selection
 Specify a language code (e.g., 'ca' for Catalan, 'en' for English):
 ```bash
-python3 main.py "Hello everyone" -e google -v en
+echovoice "Hello everyone" -e google -v en
 ```
 
 ### Piped Input
 Pipe the output of any command to EchoVoice:
 ```bash
-echo "Process finished successfully" | python3 main.py
+echo "Process finished successfully" | echovoice
 ```
 
 ## Options
@@ -55,8 +69,8 @@ echo "Process finished successfully" | python3 main.py
 
 ### Example
 ```bash
-python3 main.py "Hola, aquesta frase es quedarà a la caché."
+echovoice "Hola, aquesta frase es quedarà a la caché."
 # Second time will be instant:
-python3 main.py "Hola, aquesta frase es quedarà a la caché."
+echovoice "Hola, aquesta frase es quedarà a la caché."
 ```
 
