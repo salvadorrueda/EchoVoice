@@ -50,8 +50,17 @@ Use the more natural Google engine (requires internet):
 echovoice "Bon dia a tothom" -e google
 ```
 
-### Voice/Language Selection
-Specify a language code (e.g., 'ca' for Catalan, 'en' for English):
+### Automatic Language Detection
+EchoVoice detects the language of the provided text automatically. You don't need to specify it:
+
+```bash
+echovoice "Aquest text està en català"
+echovoice "This text is in English"
+echovoice "Este texto está en español"
+```
+
+### Voice/Language Selection (Manual)
+If you want to force a specific language code (e.g., if detection fails or for specific accents):
 ```bash
 echovoice "Hello everyone" -e google -v en
 ```
